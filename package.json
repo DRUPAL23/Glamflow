@@ -1,19 +1,9 @@
 {
-  "name": "glamflow",
-  "private": true,
-  "version": "0.1.0",
-  "packageManager": "npm@10.9.3",
-  "workspaces": ["apps/*", "packages/*"],
-  "scripts": {
-    "dev": "npm run dev --workspace=@glamflow/web",
-    "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "format": "prettier --write ."
-  },
-  "devDependencies": {
-    "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
-  }
+  "name":"glamflow",
+  "private":true,
+  "version":"0.3.0",
+  "packageManager":"npm@10.9.3",
+  "workspaces":["apps/*","packages/*"],
+  "scripts":{"dev":"npm run dev --workspace=@glamflow/web","build":"npm run build --workspaces --if-present","lint":"npm run lint --workspaces --if-present","typecheck":"npm run typecheck --workspaces --if-present","test":"npm run test --workspaces --if-present","format":"prettier --write ."},
+  "devDependencies":{"prettier":"^3.6.2","typescript":"^5.9.2"}
 }
