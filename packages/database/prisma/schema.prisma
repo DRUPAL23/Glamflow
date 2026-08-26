@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MembershipRole { OWNER ADMIN EDITOR VIEWER }
+enum ContentStatus { DRAFT SCHEDULED PUBLISHING PUBLISHED FAILED }
+
+enum Platform { INSTAGRAM TIKTOK YOUTUBE FACEBOOK LINKEDIN }
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  auditLogs    AuditLog[]
+}
+
+model Workspace {
+  id           String          @id @default(cuid())
+  name         String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  memberships  Membership[]
+  socialAccounts SocialAccount[]
+  content      Content[]
+  jobs         PublishJob[]
+  auditLogs    AuditLog[]
+}
+
+model Membership {
+  id          String         @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        MembershipRole @default(VIEWER)
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model SocialAccount {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  platform     Platform
+  externalId   String
+  displayName  String?
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, platform, externalId])
+  @@index([workspaceId])
+}
+
+model Content {
+  id          String        @id @default(cuid())
+  workspaceId String
+  title       String
+  body        String        @default("")
+  platform    Platform      @default(INSTAGRAM)
+  status      ContentStatus @default(DRAFT)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  jobs        PublishJob[]
+  @@index([workspaceId, status])
+  @@index([workspaceId, scheduledAt])
+}
+
+model PublishJob {
+  id          String    @id @default(cuid())
+  workspaceId String
+  contentId   String
+  runAt       DateTime
+  status      String    @default("queued")
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  content     Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, status, runAt])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  @@index([workspaceId, createdAt])
+}
