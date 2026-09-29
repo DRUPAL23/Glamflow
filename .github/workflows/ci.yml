@@ -68,16 +68,16 @@ jobs:
           context: .
           file: infrastructure/docker/web.Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ghcr.io/${{ github.repository_owner }}/glamflow-web:${{ github.sha }}
+          tags: ghcr.io/${{ steps.image.outputs.owner }}/glamflow-web:${{ github.sha }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: infrastructure/docker/api.Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ghcr.io/${{ github.repository_owner }}/glamflow-api:${{ github.sha }}
+          tags: ghcr.io/${{ steps.image.outputs.owner }}/glamflow-api:${{ github.sha }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: infrastructure/docker/worker.Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: ghcr.io/${{ github.repository_owner }}/glamflow-worker:${{ github.sha }}
+          tags: ghcr.io/${{ steps.image.outputs.owner }}/glamflow-worker:${{ github.sha }}
