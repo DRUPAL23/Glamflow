@@ -73,6 +73,7 @@ jobs:
             set -eu
             cd "$APP_DIR"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            IMAGE_OWNER="$(printf "%s" "$IMAGE_OWNER" | tr "[:upper:]" "[:lower:]")"
             export GLAMFLOW_WEB_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-web:$IMAGE_SHA"
             export GLAMFLOW_API_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-api:$IMAGE_SHA"
             export GLAMFLOW_WORKER_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-worker:$IMAGE_SHA"
