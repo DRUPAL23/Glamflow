@@ -1,0 +1,74 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Full Git commit SHA for images already published to GHCR"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.image_sha }}
+
+      - name: Validate release SHA
+        shell: bash
+        run: |
+          [[ "${{ inputs.image_sha }}" =~ ^[0-9a-f]{40}$ ]] || { echo "image_sha must be a full 40-character commit SHA"; exit 1; }
+
+      - name: Copy Compose release file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          source: "deploy/compose.yml"
+          target: ${{ secrets.PRODUCTION_APP_DIR }}
+          strip_components: 1
+
+      - name: Deploy production
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          IMAGE_SHA: ${{ inputs.image_sha }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          APP_DIR: ${{ secrets.PRODUCTION_APP_DIR }}
+          IMAGE_OWNER: ${{ github.repository_owner }}
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          envs: IMAGE_SHA,GHCR_USERNAME,GHCR_TOKEN,APP_DIR,IMAGE_OWNER
+          script: |
+            set -eu
+            cd "$APP_DIR"
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            export GLAMFLOW_WEB_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-web:$IMAGE_SHA"
+            export GLAMFLOW_API_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-api:$IMAGE_SHA"
+            export GLAMFLOW_WORKER_IMAGE="ghcr.io/$IMAGE_OWNER/glamflow-worker:$IMAGE_SHA"
+            docker compose -f compose.yml pull
+            docker compose -f compose.yml up -d --remove-orphans
+            for i in $(seq 1 30); do
+              if curl -fsS http://127.0.0.1:4000/ready >/dev/null; then
+                echo "Production API ready"
+                exit 0
+              fi
+              sleep 5
+            done
+            docker compose -f compose.yml ps
+            exit 1
